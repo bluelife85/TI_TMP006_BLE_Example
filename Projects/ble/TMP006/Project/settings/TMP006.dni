@@ -35,11 +35,28 @@ ActionState=1
 [Trace1]
 Enabled=0
 ShowSource=1
+[DebugChecksum]
+Checksum=2020656407
+[CallStack]
+ShowArgs=0
+[Disassembly]
+MixedMode=1
+[watch_formats]
+Fmt0={W}0:ret	4	0
+Fmt1={W}0:tamb	4	0
+Fmt2={W}0:vobj	4	0
 [Breakpoints]
 Count=0
 [ChipconEmu]
-Stop timers on halt=1
+Stop timers on halt=0
 Leave target running=1
+[Log file]
+LoggingEnabled=_ 0
+LogFile=_ ""
+Category=_ 0
+[TermIOLog]
+LoggingEnabled=_ 0
+LogFile=_ ""
 [Aliases]
 Count=0
 SuppressDialog=0
