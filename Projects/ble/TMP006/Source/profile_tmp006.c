@@ -35,14 +35,11 @@ static CONST gattAttrType_t tmp006Service = { ATT_BT_UUID_SIZE, tmp006ServUUID }
 static uint8 tmp006PwrCtrlProps = GATT_PROP_READ | GATT_PROP_WRITE;
 static uint8 tmp006PwrCtrl = FALSE;
 
-static uint8 tmp006VOBJProps = GATT_PROP_NOTIFY;
+static uint8 tmp006VOBJProps = GATT_PROP_READ;
 static uint8 tmp006VOBJ[2];
 
-static uint8 tmp006TAMBProps = GATT_PROP_NOTIFY;
+static uint8 tmp006TAMBProps = GATT_PROP_READ;
 static uint8 tmp006TAMB[2];
-
-static gattCharCfg_t tmp006VOBJConfig[GATT_MAX_NUM_CONN];
-static gattCharCfg_t tmp006TAMBConfig[GATT_MAX_NUM_CONN];
 
 static gattAttribute_t tmp006AttrTbl[TMP006_ATTRIBUTE_SUPPORT] = 
 {
@@ -76,16 +73,9 @@ static gattAttribute_t tmp006AttrTbl[TMP006_ATTRIBUTE_SUPPORT] =
 	
 	{
 		{ ATT_BT_UUID_SIZE, tmp006VOBJ_UUID },
-		0,
+		GATT_PERMIT_READ,
 		0,
 		tmp006VOBJ
-	},
-	
-	{
-		{ ATT_BT_UUID_SIZE, clientCharCfgUUID },
-		GATT_PERMIT_READ | GATT_PERMIT_WRITE,
-		0,
-		(uint8*)tmp006VOBJConfig
 	},
 	
 	{
@@ -97,16 +87,9 @@ static gattAttribute_t tmp006AttrTbl[TMP006_ATTRIBUTE_SUPPORT] =
 	
 	{
 		{ ATT_BT_UUID_SIZE, tmp006TAMB_UUID },
-		0,
+		GATT_PERMIT_READ,
 		0,
 		tmp006TAMB
-	},
-	
-	{
-		{ ATT_BT_UUID_SIZE, clientCharCfgUUID },
-		GATT_PERMIT_READ | GATT_PERMIT_WRITE,
-		0,
-		(uint8*)tmp006TAMBConfig
 	},
 };
 
@@ -114,7 +97,6 @@ static uint8 tmp006_ReadAttrCB( uint16 connHandle, gattAttribute_t *pAttr,
 			       uint8 *pValue, uint8 *pLen, uint16 offset, uint8 maxLen );
 static uint8 tmp006_WriteAttrCB( uint16 connHandle, gattAttribute_t *pAttr,
 				uint8 *pValue, uint8 len, uint16 offset );
-static void tmp006_HandleConnStatusCB( uint16 connHandle, uint8 changeType );
 
 CONST gattServiceCBs_t tmp006CBs = 
 {
@@ -128,10 +110,6 @@ static CONST TMP006CB_t* appCB;
 bStatus_t TMP006_AddService( uint32 services )
 {
 	bStatus_t ret = SUCCESS;
-	GATTServApp_InitCharCfg( INVALID_CONNHANDLE, tmp006VOBJConfig );
-	GATTServApp_InitCharCfg( INVALID_CONNHANDLE, tmp006TAMBConfig );
-	
-	VOID linkDB_Register( tmp006_HandleConnStatusCB );
 	
 	if ( services & TMP006_SERVICE )
 	{
@@ -176,9 +154,6 @@ bStatus_t TMP006_SetParameter( uint8 param, uint8 len, void* pValue )
 		if( len == sizeof (uint16) )
 		{
 			VOID osal_memcpy( tmp006VOBJ, pValue, 2 );
-			GATTServApp_ProcessCharCfg( tmp006VOBJConfig, tmp006VOBJ, FALSE, 
-						   tmp006AttrTbl, GATT_NUM_ATTRS( tmp006AttrTbl ),
-						   INVALID_TASK_ID );
 		}
 		else
 		{
@@ -189,9 +164,6 @@ bStatus_t TMP006_SetParameter( uint8 param, uint8 len, void* pValue )
 		if( len == sizeof (uint16) )
 		{
 			VOID osal_memcpy( tmp006TAMB, pValue, 2 );
-			GATTServApp_ProcessCharCfg( tmp006TAMBConfig, tmp006TAMB, FALSE, 
-						   tmp006AttrTbl, GATT_NUM_ATTRS( tmp006AttrTbl ),
-						   INVALID_TASK_ID );
 		}
 		else
 		{
@@ -225,6 +197,14 @@ static uint8 tmp006_ReadAttrCB( uint16 connHandle, gattAttribute_t *pAttr,
 		    case TMP006_POWER_CTRL_UUID:
 			*pLen = 1;
 			pValue[0] = *pAttr->pValue;
+			break;
+		    case TMP006_VOBJ_UUID:
+			*pLen = 2;
+			VOID osal_memcpy(pValue, pAttr->pValue, 2);
+			break;
+		    case TMP006_TAMB_UUID:
+			*pLen = 2;
+			VOID osal_memcpy(pValue, pAttr->pValue, 2);
 			break;
 		    default:
 			*pLen = 0;
@@ -273,23 +253,8 @@ static uint8 tmp006_WriteAttrCB( uint16 connHandle, gattAttribute_t *pAttr,
 	
 	if ( (notify != 0xFF) && appCB && appCB->pfPower )
 	{
-		appCB->pfPower(pValue[0]);
+		appCB->pfPower(*pValue);
 	}
 	
 	return ( status );
-}
-
-static void tmp006_HandleConnStatusCB( uint16 connHandle, uint8 changeType )
-{
-	if ( connHandle != LOOPBACK_CONNHANDLE )
-	{
-		// Reset Client Char Config if connection has dropped
-		if ( ( changeType == LINKDB_STATUS_UPDATE_REMOVED )      ||
-		    ( ( changeType == LINKDB_STATUS_UPDATE_STATEFLAGS ) && 
-		     ( !linkDB_Up( connHandle ) ) ) )
-		{ 
-			GATTServApp_InitCharCfg( connHandle, tmp006VOBJConfig );
-			GATTServApp_InitCharCfg( connHandle, tmp006TAMBConfig );
-		}
-	}
 }

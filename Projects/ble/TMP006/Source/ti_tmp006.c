@@ -32,15 +32,19 @@ void TMP006_wake(void)
 
 uint16 TMP006_readTAMBValue(void)
 {
-	uint16 ret = TMP006_read16(TMP006_READ_TAMB);
+	uint16 ret;
 	
+	ret = TMP006_read16(TMP006_READ_TAMB);
+	
+	ret >>= 2;
 	return ret;
 }
 
 uint16 TMP006_readVOBJValue(void)
 {
-	uint16 ret = TMP006_read16(TMP006_READ_VOBJ);
+	uint16 ret;
 	
+	ret = TMP006_read16(TMP006_READ_VOBJ);
 	return ret;
 }
 
